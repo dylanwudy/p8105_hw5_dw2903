@@ -9,6 +9,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(patchwork)
+library(purrr)
 set.seed(10)
 iris_with_missing = iris %>% 
   map_df(~replace(.x, sample(1:150, 20), NA)) %>%
@@ -67,8 +68,63 @@ data_2 %>%
 Compared the control group with experimental group, control group kept general consistant throughout 8 weeks of observation while experimental group tended to increased as time increased.  
 
 
+## Problem 3
+creat function
+```{r}
+sim_regression = function(beta_1) {
+  sim_data=tibble(
+    x =rnorm(30, mean=0,sd=1),
+    e =rnorm(30, mean=0,sd=sqrt(50)),
+    y=2+beta_1*x+e,
+  )
+  fit=broom::tidy(lm(y~x, data=sim_data))
+  tibble(
+    beta1_hat = as.numeric(fit[2,2]),
+    beta1_hat_p =as.numeric(fit[2,5])
+  )
+}
+```
+repeat 10000 times with test
+```{r}
+sim_results =
+  tibble(beta1 = c(0:6)) %>%
+  mutate(
+    output_list=map(.x=n_list,~rerun(10000,sim_regression(.x))),
+    est = map(output_list,bind_rows)
+    )%>%
+  select(-output_list)%>%
+  unnest(est)%>%
+  mutate(
+    test=case_when(beta1_hat_p <0.05 ~"reject",
+                   beta1_hat_p >=0.05 ~"fail to reject")
+  )
 
+```
+plot of power
+```{r}
+sim_results %>%
+  group_by(beta1,test)%>%
+  count()%>%
+  ggplot(aes(x=beta1,y=n,fill=test))+geom_bar(stat = "identity")+geom_text(aes(label=n),position = position_stack(vjust = 0.5))
+  
+```
+as the beta_1 increase, the power increased as the true value is further away from the null hypothesis.
 
+plot of relationship of beta 1 and beta 1 hat
+```{r}
+plot_3_2=sim_results %>%
+  group_by(beta1)%>%
+  summarize(mean_beta=mean(beta1_hat))%>%
+  ggplot(aes(y=mean_beta,x=beta1))+geom_point()
+plot_3_3=sim_results %>%
+  filter(test =="reject") %>%
+  group_by(beta1)%>%
+  summarize(mean_beta=mean(beta1_hat))%>%
+  ggplot(aes(y=mean_beta,x=beta1))+geom_point()
+plot_3_2 /plot_3_3
+
+```
+The mean of beta_hat_1 for those reject the null hypothesis is different from the true mean of beta_hat_1 especially in smaller beta1 value as beta1 getting closer to the null hypothesis, the beta_hat_1 reject null hypothesis is more likely to be the outliers instead of the majority of values.
 
 
 
