@@ -8,13 +8,14 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(patchwork)
 set.seed(10)
 iris_with_missing = iris %>% 
   map_df(~replace(.x, sample(1:150, 20), NA)) %>%
   mutate(Species = as.character(Species))
 ```
 
-Problem 1
+## Problem 1
 build up function
 ```{r}
 f1 = function(x){
@@ -31,8 +32,39 @@ mapping
 iris_without_missing = map_df(iris_with_missing,f1)
 ```
 
+## Problem 2
+Tidy data
+```{r}
+data_list=list.files("./data",full.names = TRUE)
+data_list_name=list.files("./data")
+data_2=map_df(data_list,read.csv) %>%
+  mutate(
+    name = data_list_name
+    )%>%
+  separate(name, into = c("group","id"),sep=3) %>%
+  mutate(
+    id = str_remove_all(id,"[_0.csv]"),
+    id = as.factor(id),
+    group = as.character(group)
+  )%>%
+  select(group, id, everything()) %>%
+  pivot_longer(
+    week_1:week_8,
+    names_to = "week",
+    names_prefix = "week_",
+    values_to = "observation"
+  ) %>%
+  mutate(
+    week = as.numeric(week)
+  )
 
+```
+```{r}
+data_2 %>%
+  ggplot(aes(x=week,y=observation,color=id))+geom_point()+geom_line()+ facet_grid(~group)
+```
 
+Compared the control group with experimental group, control group kept general consistant throughout 8 weeks of observation while experimental group tended to increased as time increased.  
 
 
 
