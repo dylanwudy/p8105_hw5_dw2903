@@ -89,7 +89,7 @@ repeat 10000 times with test
 sim_results =
   tibble(beta1 = c(0:6)) %>%
   mutate(
-    output_list=map(.x=n_list,~rerun(10000,sim_regression(.x))),
+    output_list=map(.x=beta1,~rerun(10000,sim_regression(.x))),
     est = map(output_list,bind_rows)
     )%>%
   select(-output_list)%>%
